@@ -1,0 +1,227 @@
+{
+  "schema_version": 1,
+  "notice": "All channels, people, identifiers, messages and metrics in this file are fictional demonstration data.",
+  "jobs": [
+    {
+      "username": "northstar_collective_demo",
+      "requested_target": "@northstar_collective_demo",
+      "tags": ["虚构演示数据", "创作者合作"],
+      "result": {
+        "channel": {
+          "telegram_chat_id": "demo-channel-1001",
+          "username": "northstar_collective_demo",
+          "title": "Northstar Collective（虚构演示）",
+          "bio": "Fictional creator community. Business contact @northstar_demo_owner. Updates bot @northstar_demo_bot.",
+          "public_url": "https://example.invalid/telegram/northstar_collective_demo",
+          "linked_chat_id": "",
+          "linked_chat_title": "",
+          "linked_chat_username": "",
+          "member_count": 12840,
+          "last_post_at": "2026-01-15T08:30:00Z",
+          "last_comment_at": "2026-01-15T09:12:00Z",
+          "last_activity_at": "2026-01-15T09:12:00Z",
+          "last_activity_source": "comment",
+          "posts_scanned": 36,
+          "pinned_scanned": 2,
+          "comments_fetched": 47,
+          "comments_truncated": false
+        },
+        "commenters": [
+          {
+            "sender_type": "user",
+            "sender_key": "demo-user-1001",
+            "user_id": "demo-user-1001",
+            "sender_chat_id": "",
+            "username": "maya_demo_creator",
+            "display_name": "Maya Demo",
+            "comment_count": 8,
+            "post_count": 4,
+            "last_comment_at": "2026-01-15T09:12:00Z",
+            "source_posts": ["demo://northstar/post/35", "demo://northstar/post/36"],
+            "missing_username_reason": "",
+            "lead_status": "todo",
+            "tags": ["虚构联系人"],
+            "followup_note": "演示备注：评估创作者合作方向。"
+          },
+          {
+            "sender_type": "user",
+            "sender_key": "demo-user-1002",
+            "user_id": "demo-user-1002",
+            "sender_chat_id": "",
+            "username": "liam_demo_builder",
+            "display_name": "Liam Demo",
+            "comment_count": 5,
+            "post_count": 3,
+            "last_comment_at": "2026-01-14T18:20:00Z",
+            "source_posts": ["demo://northstar/post/34"],
+            "missing_username_reason": "",
+            "lead_status": "new",
+            "tags": ["虚构联系人"],
+            "followup_note": ""
+          }
+        ],
+        "contacts": [
+          {
+            "contact_type": "telegram_username",
+            "value": "@northstar_demo_owner",
+            "source_type": "bio",
+            "source_ref": "bio",
+            "evidence": "Business contact @northstar_demo_owner",
+            "confidence": "high",
+            "extractor": "rule",
+            "entity_kind": "user",
+            "entity_title": "Northstar Demo Owner",
+            "is_contactable": true,
+            "classification_status": "completed",
+            "lead_status": "todo",
+            "tags": ["虚构联系人"],
+            "followup_note": "演示联系人，不对应真实个人。"
+          },
+          {
+            "contact_type": "telegram_username",
+            "value": "@northstar_demo_bot",
+            "source_type": "bio",
+            "source_ref": "bio",
+            "evidence": "Updates bot @northstar_demo_bot",
+            "confidence": "high",
+            "extractor": "rule",
+            "entity_kind": "bot",
+            "entity_title": "Northstar Demo Bot",
+            "is_contactable": false,
+            "classification_status": "completed",
+            "lead_status": "not_fit",
+            "tags": ["虚构机器人"],
+            "followup_note": ""
+          }
+        ],
+        "raw_artifacts": [
+          {
+            "source_type": "pinned",
+            "source_ref": "demo://northstar/pinned/1",
+            "text": "Fictional partnership brief for product demonstrations only.",
+            "message_date": "2026-01-10T10:00:00Z"
+          },
+          {
+            "source_type": "post",
+            "source_ref": "demo://northstar/post/36",
+            "text": "Demo community roundtable: creator operations and partnership workflows.",
+            "message_date": "2026-01-15T08:30:00Z"
+          }
+        ],
+        "summary": {
+          "channel_title": "Northstar Collective（虚构演示）",
+          "entity_type": "channel",
+          "auto_tags": ["公开频道", "近期活跃", "虚构演示"],
+          "posts_scanned": 36,
+          "comments_fetched": 47,
+          "unique_user_commenters": 2,
+          "public_usernames": 2,
+          "contacts_found": 2,
+          "contactable_users": 1,
+          "excluded_contact_entities": 1,
+          "language": {"code": "en", "label": "英语", "confidence": 0.92, "method": "demo_fixture", "sample_chars": 480},
+          "engagement": {"posts_measured": 36, "posts_with_views": 36, "avg_views": 4680, "avg_reactions": 94.2, "avg_replies": 18.6, "avg_forwards": 22.4, "engagement_rate": 2.41, "posts_per_week": 4.6, "posts_last_30d": 18, "method": "demo_fixture"},
+          "similar_channels": [
+            {"rank": 1, "username": "signal_workshop_demo", "title": "Signal Workshop（虚构演示）", "member_count": 8600, "public_url": "https://example.invalid/telegram/signal_workshop_demo", "avg_views": 3120, "avg_reactions": 51.0, "engagement_posts": 3},
+            {"rank": 2, "username": "harbor_growth_lab_demo", "title": "Harbor Growth Lab（虚构演示）", "member_count": 3420, "public_url": "https://example.invalid/telegram/harbor_growth_lab_demo", "avg_views": 980, "avg_reactions": 22.0, "engagement_posts": 3}
+          ],
+          "similar_channels_status": "completed",
+          "ai_status": "demo_fixture",
+          "ai_report": {
+            "executive_summary": "虚构的创作者社群案例，用于演示频道画像、联系人核验与发现流程。",
+            "channel_positioning": "创作者运营与合作交流。",
+            "activity_assessment": "演示数据设定为稳定更新。",
+            "contact_and_conversion": "BIO 中包含一个虚构负责人和一个明确排除的机器人。",
+            "audience_and_comments": "两名虚构公开用户用于演示互动线索。",
+            "content_strategy": "演示主题包含圆桌、工作流与合作案例。",
+            "risk_notes": ["全部数据为虚构，不可用于真实触达。"]
+          }
+        },
+        "ai_status": "demo_fixture",
+        "joined_during_job": false
+      }
+    },
+    {
+      "username": "harbor_growth_lab_demo",
+      "requested_target": "@harbor_growth_lab_demo",
+      "tags": ["虚构演示数据", "社区运营"],
+      "result": {
+        "channel": {
+          "telegram_chat_id": "demo-group-2001",
+          "username": "harbor_growth_lab_demo",
+          "title": "Harbor Growth Lab（虚构演示）",
+          "bio": "Fictional public discussion group for partnership operations.",
+          "public_url": "https://example.invalid/telegram/harbor_growth_lab_demo",
+          "linked_chat_id": "",
+          "linked_chat_title": "",
+          "linked_chat_username": "",
+          "member_count": 3420,
+          "last_post_at": "2026-01-14T07:00:00Z",
+          "last_comment_at": "2026-01-15T06:45:00Z",
+          "last_activity_at": "2026-01-15T06:45:00Z",
+          "last_activity_source": "message",
+          "posts_scanned": 120,
+          "pinned_scanned": 1,
+          "comments_fetched": 120,
+          "comments_truncated": false
+        },
+        "commenters": [
+          {
+            "sender_type": "user",
+            "sender_key": "demo-user-2001",
+            "user_id": "demo-user-2001",
+            "sender_chat_id": "",
+            "username": "sora_demo_operator",
+            "display_name": "Sora Demo",
+            "comment_count": 16,
+            "post_count": 9,
+            "last_comment_at": "2026-01-15T06:45:00Z",
+            "source_posts": ["demo://harbor/message/118", "demo://harbor/message/120"],
+            "missing_username_reason": "",
+            "lead_status": "new",
+            "tags": ["虚构联系人"],
+            "followup_note": ""
+          }
+        ],
+        "contacts": [],
+        "raw_artifacts": [
+          {
+            "source_type": "post",
+            "source_ref": "demo://harbor/message/120",
+            "text": "Demo discussion about partnership qualification and handoff notes.",
+            "message_date": "2026-01-15T06:45:00Z"
+          }
+        ],
+        "summary": {
+          "channel_title": "Harbor Growth Lab（虚构演示）",
+          "entity_type": "group",
+          "auto_tags": ["公开群组", "近期活跃", "混合内容", "虚构演示"],
+          "posts_scanned": 120,
+          "comments_fetched": 120,
+          "unique_user_commenters": 1,
+          "public_usernames": 1,
+          "contacts_found": 0,
+          "contactable_users": 0,
+          "excluded_contact_entities": 0,
+          "language": {"code": "zh", "label": "中文", "confidence": 0.9, "method": "demo_fixture", "sample_chars": 620},
+          "engagement": {"posts_measured": 120, "posts_with_views": 0, "avg_views": 0, "avg_reactions": 3.2, "avg_replies": 0.0, "avg_forwards": 0.0, "engagement_rate": 0.0, "posts_per_week": 42.0, "posts_last_30d": 120, "method": "demo_fixture"},
+          "similar_channels": [],
+          "similar_channels_status": "completed",
+          "group_quality": {"classification": "mixed", "is_pure_ad_group": false, "confidence": "high", "ad_score": 0.18, "reasons": ["虚构样本包含持续对话", "重复推广内容较少"], "method": "demo_fixture", "messages_sampled": 80, "unique_senders": 28, "public_usernames": 19, "conversation_ratio": 0.62, "ad_ratio": 0.14, "repeated_ratio": 0.06},
+          "ai_status": "demo_fixture",
+          "ai_report": {
+            "executive_summary": "虚构公开群组案例，用于演示群质量和活跃用户线索。",
+            "channel_positioning": "合作运营讨论群。",
+            "activity_assessment": "演示数据设定为高频讨论。",
+            "contact_and_conversion": "没有公开负责人联系方式。",
+            "audience_and_comments": "可从虚构公开 username 观察讨论参与度。",
+            "content_strategy": "以资格判断、交接和复盘为主题。",
+            "risk_notes": ["全部数据为虚构，不可用于真实触达。"]
+          }
+        },
+        "ai_status": "demo_fixture",
+        "joined_during_job": false
+      }
+    }
+  ]
+}

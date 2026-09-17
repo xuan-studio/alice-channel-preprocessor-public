@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}频道发现池 · {{ settings.app_name }}{% endblock %}
+{% block content %}
+<section class="section-head discover-head"><div><a class="back-link" href="/">← 返回任务台</a><p class="eyebrow">OFFICIAL DISCOVERY</p><h1>频道发现池</h1><p class="muted">汇总所有已扫描频道的 Telegram 官方相似推荐，保留原始排名，并按目标去重。</p></div></section>
+
+{% if message %}<div class="alert success-alert">{{ message }}</div>{% endif %}
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+<section class="workspace-metrics discovery-metrics">
+  <div><span>全部推荐</span><strong>{{ stats.total }}</strong></div>
+  <div><span>未扫描</span><strong>{{ stats.new }}</strong></div>
+  <div><span>处理中</span><strong>{{ stats.active }}</strong></div>
+  <div><span>已完成 v2</span><strong>{{ stats.completed }}</strong></div>
+  <div><span>旧结果待升级</span><strong>{{ stats.needs_upgrade }}</strong></div>
+</section>
+
+<form method="get" action="/discover" class="lead-filter-bar discovery-filter">
+  <label>搜索<input name="q" value="{{ query }}" placeholder="频道、标题或来源频道"></label>
+  <label>状态<select name="state"><option value="">全部状态</option><option value="new" {% if state_filter == 'new' %}selected{% endif %}>未扫描</option><option value="active" {% if state_filter == 'active' %}selected{% endif %}>处理中</option><option value="completed_v2" {% if state_filter == 'completed_v2' %}selected{% endif %}>已完成 v2</option><option value="completed_legacy" {% if state_filter == 'completed_legacy' %}selected{% endif %}>旧结果待升级</option><option value="failed" {% if state_filter == 'failed' %}selected{% endif %}>上次失败</option></select></label>
+  <button>筛选</button>
+  {% if query or state_filter %}<a class="button ghost-button" href="/discover">清除</a>{% endif %}
+</form>
+
+<form method="post" action="/discover/scan">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="table-wrap discovery-table"><table><thead><tr><th>选择</th><th>官方排名</th><th>频道</th><th>规模与互动</th><th>推荐来源</th><th>状态</th><th>入口</th></tr></thead><tbody>
+  {% for item in candidates %}<tr>
+    <td>{% if item.state in ['new','failed','completed_legacy'] %}<input type="checkbox" name="usernames" value="{{ item.username }}">{% else %}-{% endif %}</td>
+    <td>#{{ item.best_rank }}</td>
+    <td><strong>@{{ item.username }}</strong><small>{{ item.title or '未命名频道' }}</small></td>
+    <td>{{ item.member_count }} 成员<small>均阅 {{ item.avg_views }} · 均反应 {{ item.avg_reactions }}{% if item.engagement_posts %} · {{ item.engagement_posts }} 条样本{% endif %}</small></td>
+    <td><strong>{{ item.source_count }} 个频道推荐</strong><div class="source-link-list">{% for source in item.sources[:3] %}<a href="/jobs/{{ source.job_id }}">@{{ source.username }} #{{ source.rank }}</a>{% endfor %}{% if item.source_count > 3 %}<span>+{{ item.source_count - 3 }}</span>{% endif %}</div></td>
+    <td><span class="discovery-state state-{{ item.state }}">{% if item.state == 'new' %}未扫描{% elif item.state == 'active' %}处理中{% elif item.state == 'completed_v2' %}已完成 v2{% elif item.state == 'completed_legacy' %}待升级{% else %}上次失败{% endif %}</span>{% if item.job_id %}<small>{{ item.job_status }}</small>{% endif %}</td>
+    <td><a href="{{ item.public_url }}" target="_blank" rel="noreferrer">Telegram</a>{% if item.job_id %}<a href="/jobs/{{ item.job_id }}">任务</a>{% endif %}</td>
+  </tr>{% else %}<tr><td colspan="7" class="empty">暂无相似频道推荐。先完成一个公开频道的 v2 扫描，推荐会自动进入这里。</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% if candidates %}<div class="discovery-actions"><button>扫描选中频道</button><span>每次最多提交 50 个，已有活跃任务或 24 小时缓存会自动复用。</span></div>{% endif %}
+</form>
+{% endblock %}

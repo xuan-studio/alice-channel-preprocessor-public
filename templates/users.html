@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-head admin-head">
+  <div>
+    <p class="eyebrow">SUPER ADMIN</p>
+    <h1>账户管理</h1>
+    <p class="muted">超级管理员可以新增账户、调整角色、停用账户和重置密码。</p>
+  </div>
+</section>
+
+{% if message %}<div class="alert success-alert">{{ message }}</div>{% endif %}
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+<section class="grid-2 admin-grid">
+  <article class="card">
+    <h2>新增账户</h2>
+    <form method="post" action="/admin/users" class="stack">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>用户名<input name="username" pattern="[a-z0-9_.-]{3,64}" required></label>
+      <label>显示名称<input name="display_name" maxlength="120"></label>
+      <label>角色
+        <select name="role">
+          {% for role in roles %}<option value="{{ role }}">{{ role }}</option>{% endfor %}
+        </select>
+      </label>
+      <button>创建账户并生成临时密码</button>
+    </form>
+    {% if temporary_password %}
+    <div class="result-box temp-password-box">
+      <strong>一次性临时密码</strong>
+      <label>账号<input value="{{ temporary_username }}" readonly></label>
+      <label>临时密码<input value="{{ temporary_password }}" readonly></label>
+      <small>只显示这一次；该成员首次登录后必须修改密码。</small>
+    </div>
+    {% endif %}
+  </article>
+
+  <article class="card">
+    <h2>邀请成员</h2>
+    <p class="muted">生成一次性链接，有效期 7 天，成员自行设置密码。</p>
+    <form method="post" action="/admin/invites" class="stack">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>角色
+        <select name="role">
+          <option value="staff">staff</option>
+          <option value="admin">admin</option>
+          <option value="super_admin">super_admin</option>
+        </select>
+      </label>
+      <button>生成邀请链接</button>
+    </form>
+    {% if invite_url %}
+    <div class="result-box">
+      <strong>只显示这一次</strong>
+      <input value="{{ invite_url }}" readonly>
+      <small>有效期至 {{ invite_expires_at }}</small>
+    </div>
+    {% endif %}
+  </article>
+</section>
+
+<section class="card">
+  <div class="section-head no-top-margin">
+    <div>
+      <p class="eyebrow">TEAM ACCOUNTS</p>
+      <h2>现有账户</h2>
+    </div>
+    <span class="muted">{{ users|length }} 个账户</span>
+  </div>
+  <div class="table-wrap users-table">
+    <table>
+      <thead>
+        <tr>
+          <th>用户名</th>
+          <th>显示名称</th>
+          <th>角色</th>
+          <th>启用</th>
+          <th>改密</th>
+          <th>最近登录</th>
+          <th>更新账户</th>
+          <th>重置密码</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in users %}
+        <tr>
+          <td><strong>{{ item.username }}</strong></td>
+          <td>{{ item.display_name or '-' }}</td>
+          <td><span class="role-pill">{{ item.role }}</span></td>
+          <td>{{ 'active' if item.active else 'disabled' }}</td>
+          <td>{% if item.must_change_password %}<span class="badge manual_review">required</span>{% else %}-{% endif %}</td>
+          <td>{{ item.last_login_at|shanghai }}</td>
+          <td>
+            <form method="post" action="/admin/users/{{ item.id }}" class="user-inline-form">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <input name="display_name" value="{{ item.display_name }}" placeholder="显示名称">
+              <select name="role">
+                {% for role in roles %}<option value="{{ role }}" {% if role == item.role %}selected{% endif %}>{{ role }}</option>{% endfor %}
+              </select>
+              <label class="checkbox mini-checkbox"><input type="checkbox" name="active" value="1" {% if item.active %}checked{% endif %}> 启用</label>
+              <button class="secondary compact-button">保存</button>
+            </form>
+          </td>
+          <td>
+            <form method="post" action="/admin/users/{{ item.id }}/reset-password" class="reset-inline-form">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <button class="danger compact-button">生成临时密码</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}@{{ job.normalized_username }} · {{ settings.app_name }}{% endblock %}
+{% block content %}
+{% set ai_report = job.result_summary.get('ai_report', {}) %}
+{% set auto_tags = job.result_summary.get('auto_tags', []) %}
+<section class="job-head channel-detail-head">
+  <div><a class="back-link" href="/">← 返回任务台</a><p class="eyebrow">CHANNEL RESEARCH</p><h1>{% if job.normalized_username == 'manual_review' %}人工复核{% else %}@{{ job.normalized_username }}{% endif %}</h1><p>{{ snapshot.title if snapshot else job.requested_target }}</p></div>
+  <div class="status-box"><span class="badge {{ job.status }}">{{ job.status }}</span><strong>{{ job.progress }}%</strong><span>{{ job.stage }}</span></div>
+</section>
+<section class="task-meta-panel">
+  <div>
+    <span>提交账户</span>
+    <strong>{{ job.created_by_username or 'system' }}</strong>
+    {% if auto_tags %}<div class="tag-row">{% for tag in auto_tags %}<span class="tag auto-tag">{{ tag }}</span>{% endfor %}</div>{% endif %}
+  </div>
+  <form method="post" action="/jobs/{{ job.public_id }}/tags" class="tag-edit-form">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>任务标签<input name="tags" value="{{ job.tags|join(', ') }}" placeholder="例如：越南 KOL，待报价，9月批次"></label>
+    <button class="secondary">保存标签</button>
+  </form>
+</section>
+{% if job.error_message %}<div class="alert">{{ job.error_message }}</div>{% endif %}
+{% if message %}<div class="alert success-alert">{{ message }}</div>{% endif %}
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+<div class="actions detail-actions">
+  {% if job.status in ['queued','resolving','joining','metadata','posts','comments','contact_analysis','rate_limited'] %}<form method="post" action="/jobs/{{ job.public_id }}/pause"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="secondary">暂停</button></form>{% endif %}
+  {% if job.status == 'paused' %}<form method="post" action="/jobs/{{ job.public_id }}/resume"><input type="hidden" name="csrf" value="{{ csrf }}"><button>继续</button></form>{% endif %}
+  {% if job.status == 'failed' or (job.status == 'manual_review' and job.error_code != 'manual_target') %}<form method="post" action="/jobs/{{ job.public_id }}/retry"><input type="hidden" name="csrf" value="{{ csrf }}"><button>重试</button></form>{% endif %}
+  {% if job.status not in ['completed','cancelled','expired'] %}<form method="post" action="/jobs/{{ job.public_id }}/cancel"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="danger">取消</button></form>{% endif %}
+  {% if job.status == 'completed' %}<a class="button partnership-button" href="/jobs/{{ job.public_id }}/export-community.csv">导出社群合作</a><a class="button audience-button" href="/jobs/{{ job.public_id }}/export-audience.csv">导出用户拓展</a><details class="more-export"><summary>更多导出</summary><div><a href="/jobs/{{ job.public_id }}/export.csv">全部评论者 CSV</a><a href="/jobs/{{ job.public_id }}/export.json">完整 JSON</a></div></details>{% endif %}
+</div>
+
+{% if snapshot and not v2_ready %}<section class="v2-upgrade-callout"><div><p class="eyebrow">V2 UPGRADE</p><h2>这是一份旧版扫描结果</h2><p>重新分析后会补齐语种、浏览与互动画像，以及 Telegram 相似频道推荐。</p></div>{% if can_force_scan %}<form method="post" action="/jobs/{{ job.public_id }}/v2/rescan"><input type="hidden" name="csrf" value="{{ csrf }}"><button>重新分析并生成 v2 画像</button></form>{% else %}<span>请联系管理员重新分析</span>{% endif %}</section>{% endif %}
+
+{% if snapshot %}
+<section class="channel-overview">
+  <article class="overview-brief"><p class="eyebrow">社群画像摘要</p><h2>{{ snapshot.title }}</h2><p>{{ ai_report.get('executive_summary', snapshot.bio or '尚未生成 AI 画像。') }}</p></article>
+  <div class="overview-metrics"><div><span>最后活跃</span><strong>{{ snapshot.last_activity_at|shanghai }}</strong><small>{{ snapshot.last_activity_source or '-' }}</small></div><div><span>成员</span><strong>{{ snapshot.member_count }}</strong><small>扫描快照</small></div><div><span>公开联系线索</span><strong>{{ direct_contact_groups|length }}</strong><small>Telegram 联系入口</small></div><div><span>互动用户线索</span><strong>{{ audience_candidates|length }}</strong><small>已排除联系人重叠</small></div></div>
+</section>
+
+<section class="insight-panel">
+  <div class="section-head"><div><p class="eyebrow">CHANNEL SIGNALS</p><h2>语种与互动画像</h2></div><span>TDLib 公开指标</span></div>
+  <div class="insight-stat-grid">
+    <div><span>主要语种</span><strong>{{ language.get('label', '待判断') }}</strong><small>置信度 {{ (language.get('confidence', 0) * 100)|round|int }}%</small></div>
+    <div><span>平均浏览</span><strong>{{ engagement.get('avg_views', 0) }}</strong><small>{{ engagement.get('posts_with_views', 0) }} 条有浏览数据</small></div>
+    <div><span>平均互动</span><strong>{{ engagement.get('avg_reactions', 0) + engagement.get('avg_replies', 0) }}</strong><small>反应 + 回复 / 内容</small></div>
+    <div><span>互动率</span><strong>{{ engagement.get('engagement_rate', 0) }}%</strong><small>反应与回复 / 浏览</small></div>
+    <div><span>周更频率</span><strong>{{ engagement.get('posts_per_week', 0) }}</strong><small>按可见内容区间估算</small></div>
+    <div><span>近 30 天内容</span><strong>{{ engagement.get('posts_last_30d', 0) }}</strong><small>当前扫描样本</small></div>
+  </div>
+  <form method="post" action="/jobs/{{ job.public_id }}/language" class="language-override-form">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>人工纠正语种<select name="language_code"><option value="">恢复自动识别</option>{% for code,label in language_options %}<option value="{{ code }}" {% if language.get('code') == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <button class="secondary compact-button">保存语种</button>
+    {% if language.get('method') == 'manual_override' %}<span class="manual-flag">人工设置</span>{% endif %}
+  </form>
+</section>
+
+{% if similar_channels or similar_channels_status %}
+<section class="similar-panel">
+  <div class="section-head"><div><p class="eyebrow">DISCOVERY</p><h2>相似频道</h2></div><span>{{ similar_channels|length }} 个推荐</span></div>
+  {% if similar_channels %}<form method="post" action="/jobs/{{ job.public_id }}/similar/scan">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="similar-list">{% for item in similar_channels %}<label class="similar-row"><input type="checkbox" name="usernames" value="{{ item.username }}"><span><strong>#{{ item.rank }} · @{{ item.username }}</strong><small>{{ item.title or '未命名频道' }}</small></span><span>{{ item.member_count }} 成员<small>均阅 {{ item.avg_views or 0 }} · 均反应 {{ item.avg_reactions or 0 }}</small></span><a href="{{ item.public_url }}" target="_blank" rel="noreferrer">查看</a></label>{% endfor %}</div>
+    <button>批量创建扫描任务</button>
+  </form>{% elif similar_channels_status == 'unavailable' %}<p class="empty">当前 TDLib 或 Telegram 账号没有返回相似频道；不影响本次扫描结果。</p>{% else %}<p class="empty">Telegram 暂未推荐相似频道。</p>{% endif %}
+</section>
+{% endif %}
+
+{% if group_quality.visible %}
+<section class="group-quality-panel group-quality-{{ group_quality.tone }}">
+  <div class="group-quality-copy"><p class="eyebrow">GROUP QUALITY</p><h2>{{ group_quality.label }}</h2><p>{{ group_quality.status_text }}</p></div>
+  <div class="group-quality-score"><strong>{{ group_quality.score_label }}</strong><span>广告分</span></div>
+  <div class="quality-facts">
+    <div><span>置信度</span><strong>{{ group_quality.confidence_label }}</strong></div>
+    <div><span>判断方式</span><strong>{{ group_quality.method_label }}</strong></div>
+    <div><span>读取消息</span><strong>{{ group_quality.messages_scanned }}</strong></div>
+    <div><span>抽样消息</span><strong>{{ group_quality.sampled_messages }}</strong></div>
+    <div><span>用户上限</span><strong>{{ group_quality.candidate_limit }}</strong></div>
+    <div><span>处理结果</span><strong>{{ group_quality.skip_reason_label or '继续分析' }}</strong></div>
+  </div>
+  {% if group_quality.reasons %}<div class="quality-reason-row">{% for reason in group_quality.reasons %}<span class="tag">{{ reason }}</span>{% endfor %}</div>{% endif %}
+</section>
+{% endif %}
+
+<section class="funnel-grid">
+  <article class="funnel-card partnership-funnel"><p class="eyebrow">PATH 01</p><h2>社群合作</h2><p>寻找频道负责人、管理员或公开业务联系人，结合社群画像判断合作方向。</p><div><strong>{{ direct_contact_groups|length }}</strong><span>公开负责人/联系候选</span></div><a href="#community">查看社群合作分析 →</a></article>
+  <article class="funnel-card audience-funnel"><p class="eyebrow">PATH 02</p><h2>用户拓展</h2><p>从评论区或群消息筛选有公开 username 的个人，并保留来源目标和具体内容链接。</p><div><strong>{{ audience_candidates|length }}</strong><span>用户拓展候选</span></div><a href="#audience">查看用户候选 →</a></article>
+</section>
+
+<section class="card funnel-section community-section" id="community">
+  <div class="section-head"><div><p class="eyebrow">COMMUNITY PARTNERSHIP</p><h2>社群合作候选</h2></div><a class="button partnership-button compact-button" href="/jobs/{{ job.public_id }}/export-community.csv">导出社群合作 CSV</a></div>
+  <div class="community-profile-grid"><div><strong>频道定位</strong><p>{{ ai_report.get('channel_positioning', '-') }}</p></div><div><strong>合作与转化入口</strong><p>{{ ai_report.get('contact_and_conversion', '-') }}</p></div><div><strong>内容策略</strong><p>{{ ai_report.get('content_strategy', '-') }}</p></div><div><strong>活跃度判断</strong><p>{{ ai_report.get('activity_assessment', '-') }}</p></div></div>
+  <div class="section-head subhead"><h3>公开负责人 / 联系入口</h3><span>BIO 与置顶优先，帖子联系人其次</span></div>
+  <div class="contact-list">{% for group in direct_contact_groups %}<article class="contact-row {% if 'bio' in group.source_types or 'pinned' in group.source_types %}contact-row-priority{% endif %}"><div><span class="tag">{% if 'bio' in group.source_types %}BIO 候选{% elif 'pinned' in group.source_types %}置顶候选{% else %}帖子候选{% endif %}</span><h3>{{ group.value }}</h3><span class="entity-kind entity-{{ group.entity_kind }}">{% if group.entity_kind == 'user' %}可联系用户{% elif group.entity_kind == 'bot' %}机器人 · 排除{% elif group.entity_kind == 'channel' %}频道 · 排除{% elif group.entity_kind == 'group' %}群组 · 排除{% else %}身份待核验{% endif %}</span>{% if group.tags %}<div class="tag-row compact-tags">{% for tag in group.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</div>{% endif %}</div><div><strong>来源：{{ group.source_types|join(' / ') }}</strong><p>{{ group.evidence_count }} 条证据 · {{ group.confidence }}</p><span class="lead-status lead-status-{{ group.lead_status }}">{{ group.lead_status }}</span></div><div class="contact-evidence">{% for item in group.examples[:3] %}<p>“{{ item.evidence }}”</p>{% if item.source_ref.startswith('http') %}<a href="{{ item.source_ref }}">查看原帖</a>{% endif %}{% endfor %}</div><form method="post" action="/jobs/{{ job.public_id }}/contact-leads" class="lead-edit-form"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="contact_type" value="{{ group.contact_type }}"><input type="hidden" name="value" value="{{ group.value }}"><label>跟进状态<select name="lead_status">{% for value,label in lead_statuses %}<option value="{{ value }}" {% if value == group.lead_status %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><label>线索标签<input name="tags" value="{{ group.tags|join(', ') }}" placeholder="例如：负责人，高优先级"></label><label>备注<input name="followup_note" value="{{ group.followup_note }}" placeholder="下一步动作或沟通记录"></label><button class="secondary compact-button">保存线索</button></form></article>{% else %}<p class="empty">没有发现公开 Telegram 联系入口；这张频道卡暂时不能进入负责人联系路径。</p>{% endfor %}</div>
+  {% if other_contact_groups %}<details class="source-posts"><summary>查看已排除身份及其他公开入口（{{ other_contact_groups|length }}）</summary><div class="clue-grid">{% for group in other_contact_groups %}<article class="clue"><span class="tag">{% if group.entity_kind in ['bot','channel','group'] %}{{ group.entity_kind }} · 不进入联系候选{% else %}{{ group.contact_type }}{% endif %}</span><h3>{{ group.value }}</h3><p>{{ group.source_types|join(' / ') }} · {{ group.confidence }}</p></article>{% endfor %}</div></details>{% endif %}
+  {% if ai_report.get('risk_notes') %}<details class="risk-details"><summary>查看合作风险与注意事项（{{ ai_report.get('risk_notes')|length }}）</summary><ul>{% for note in ai_report.get('risk_notes', []) %}<li>{{ note }}</li>{% endfor %}</ul></details>{% endif %}
+</section>
+
+<section class="card funnel-section audience-section" id="audience">
+  <div class="section-head"><div><p class="eyebrow">AUDIENCE DISCOVERY</p><h2>用户拓展候选</h2></div><a class="button audience-button compact-button" href="/jobs/{{ job.public_id }}/export-audience.csv">导出用户拓展 CSV</a></div>
+  <p class="section-intro">候选只根据公开 username、互动次数、参与内容数、最后出现时间和跨目标情况排序。不代表已经获得联系授权。</p>
+  <div class="audience-summary"><div><span>读取互动</span><strong>{{ snapshot.comments_fetched }}</strong></div><div><span>拓展候选</span><strong>{{ audience_candidates|length }}</strong></div><div><span>联系人重叠</span><strong>{{ contact_overlap_commenters|length }}</strong></div><div><span>无 username / 匿名</span><strong>{{ other_commenters|length }}</strong></div></div>
+  <div class="table-wrap audience-table"><table><thead><tr><th>等级</th><th>username</th><th>显示名称</th><th>互动</th><th>参与内容</th><th>跨目标</th><th>来源内容</th><th>最后出现</th><th>跟进</th></tr></thead><tbody>{% for candidate in audience_candidates[:50] %}{% set item = candidate.item %}<tr><td><span class="priority priority-{{ candidate.priority }}">{{ candidate.priority }}</span></td><td><strong>@{{ item.username }}</strong>{% if candidate.tags %}<div class="tag-row compact-tags">{% for tag in candidate.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</div>{% endif %}</td><td>{{ item.display_name }}</td><td>{{ item.comment_count }}</td><td>{{ item.post_count }}</td><td>{{ candidate.cross_channel_count }}</td><td><div class="source-link-list">{% for link in candidate.source_posts[:3] %}<a href="{{ link }}">内容 {{ loop.index }}</a>{% endfor %}{% if candidate.source_posts|length > 3 %}<span>+{{ candidate.source_posts|length - 3 }}</span>{% endif %}</div></td><td>{{ item.last_comment_at|shanghai }}</td><td><form method="post" action="/jobs/{{ job.public_id }}/commenters/{{ item.id }}/lead" class="table-lead-form"><input type="hidden" name="csrf" value="{{ csrf }}"><select name="lead_status">{% for value,label in lead_statuses %}<option value="{{ value }}" {% if value == candidate.lead_status %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><input name="tags" value="{{ candidate.tags|join(', ') }}" placeholder="标签"><input name="followup_note" value="{{ candidate.followup_note }}" placeholder="备注"><button class="secondary compact-button">保存</button></form></td></tr>{% else %}<tr><td colspan="9" class="empty">没有可进入用户拓展池的公开 username。</td></tr>{% endfor %}</tbody></table></div>
+  {% if audience_candidates|length > 50 %}<p class="muted">页面展示前 50 名；导出文件包含全部 {{ audience_candidates|length }} 名候选。</p>{% endif %}
+  {% if contact_overlap_commenters %}<details class="source-posts"><summary>查看与负责人线索重叠的评论用户（{{ contact_overlap_commenters|length }}）</summary><p class="muted">这些账号优先归入社群合作路径，不重复进入个人拓展导出。</p><div class="table-wrap"><table><thead><tr><th>username</th><th>显示名称</th><th>评论</th><th>参与帖子</th></tr></thead><tbody>{% for candidate in contact_overlap_commenters %}<tr><td>@{{ candidate.item.username }}</td><td>{{ candidate.item.display_name }}</td><td>{{ candidate.item.comment_count }}</td><td>{{ candidate.item.post_count }}</td></tr>{% endfor %}</tbody></table></div></details>{% endif %}
+  {% if other_commenters %}<details class="source-posts"><summary>查看无 username、群组或匿名身份（{{ other_commenters|length }}）</summary><div class="table-wrap"><table><thead><tr><th>类型</th><th>显示名称</th><th>评论</th><th>参与帖子</th><th>说明</th></tr></thead><tbody>{% for item in other_commenters %}<tr><td>{{ item.sender_type }}</td><td>{{ item.display_name or '-' }}</td><td>{{ item.comment_count }}</td><td>{{ item.post_count }}</td><td>{{ item.missing_username_reason }}</td></tr>{% endfor %}</tbody></table></div></details>{% endif %}
+</section>
+
+<section class="card evidence-section"><details open><summary><strong>公开资料、BIO 与置顶消息</strong></summary><dl class="profile-grid"><dt>标题</dt><dd>{{ snapshot.title }}</dd><dt>BIO</dt><dd class="pre">{{ snapshot.bio or '-' }}</dd><dt>讨论群</dt><dd>{% if snapshot.linked_chat_username %}@{{ snapshot.linked_chat_username }}{% else %}{{ snapshot.linked_chat_title or '未发现关联讨论群' }}{% endif %}</dd><dt>公开地址</dt><dd><a href="{{ snapshot.public_url }}">{{ snapshot.public_url }}</a></dd><dt>最后内容</dt><dd>{{ snapshot.last_post_at|shanghai }}</dd><dt>最后互动</dt><dd>{{ snapshot.last_comment_at|shanghai }}</dd></dl><div class="section-head"><h3>置顶消息</h3><span>{{ pinned_messages|length }} 条可展示</span></div><div class="message-list">{% for item in pinned_messages %}<article class="message"><div><strong>置顶 {{ loop.index }}</strong><span>{{ item.message_date|shanghai }}</span></div><p class="pre">{{ item.text }}</p>{% if item.source_ref.startswith('http') %}<a href="{{ item.source_ref }}">打开内容</a>{% endif %}</article>{% else %}<p class="empty">没有可展示的置顶文字消息。</p>{% endfor %}</div></details>
+  {% if ai_report.get('signals') %}<details class="source-posts"><summary>查看 AI 逐条证据（{{ ai_report.get('signals')|length }}）</summary><div class="message-list">{% for signal in ai_report.get('signals', []) %}<article class="message"><div><strong>{{ signal.category }} · {{ signal.importance }}</strong><span>{{ signal.finding }}</span></div><p class="pre">{{ signal.evidence }}</p>{% if signal.source_ref.startswith('http') %}<a href="{{ signal.source_ref }}">打开证据原帖</a>{% endif %}</article>{% endfor %}</div></details>{% endif %}
+  <details class="source-posts"><summary>查看参与分析的内容文字（{{ recent_posts|length }}）</summary><div class="message-list">{% for item in recent_posts %}<article class="message"><div><strong>内容 {{ loop.index }}</strong><span>{{ item.message_date|shanghai }}</span></div><p class="pre">{{ item.text }}</p>{% if item.source_ref.startswith('http') %}<a href="{{ item.source_ref }}">打开内容</a>{% endif %}</article>{% endfor %}</div></details>
+</section>
+{% endif %}
+<details class="audit-panel"><summary>查看任务审计事件</summary><section class="card"><ol class="timeline">{% for event in events %}<li><strong>{{ event.event_type }}</strong><span>{{ event.created_at }}</span></li>{% endfor %}</ol></section></details>
+{% endblock %}

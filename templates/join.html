@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="login-card card">
+  <p class="eyebrow">TEAM INVITE</p>
+  <h1>创建你的账号</h1>
+  <p class="muted">该邀请只能使用一次。密码仅在你的浏览器与服务之间传输。</p>
+  {% if error %}<p class="alert">{{ error }}</p>{% endif %}
+  <form method="post" class="stack">
+    <label>用户名<input name="username" minlength="3" maxlength="64" autocomplete="username" required></label>
+    <label>显示名称<input name="display_name" maxlength="120"></label>
+    <label>密码<input type="password" name="password" minlength="10" autocomplete="new-password" required></label>
+    <button>接受邀请</button>
+  </form>
+</section>
+{% endblock %}

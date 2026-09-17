@@ -1,0 +1,142 @@
+name: alice-channel-preprocessor-public
+
+x-common-environment: &common_environment
+  APP_ENV: portable
+  APP_NAME: ${APP_NAME:-Telegram 频道预处理台}
+  DEMO_MODE: ${DEMO_MODE:-0}
+  DATABASE_URL: ${DATABASE_URL:-}
+  DATABASE_HOST: ${DATABASE_HOST:-}
+  DATABASE_PORT: ${DATABASE_PORT:-5432}
+  DATABASE_USER: ${DATABASE_USER:-preprocessor}
+  DATABASE_NAME: ${DATABASE_NAME:-channel_preprocessor}
+  DATABASE_PASSWORD_FILE: /run/secrets/database_password
+  PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://127.0.0.1:8848}
+  TRUSTED_HOSTS: ${TRUSTED_HOSTS:-*}
+  SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-0}
+  PLATFORM_BOOTSTRAP_USERNAME: ${PLATFORM_BOOTSTRAP_USERNAME:-admin}
+  PLATFORM_BOOTSTRAP_PASSWORD_FILE: /run/secrets/platform_bootstrap_password
+  SESSION_DAYS: ${SESSION_DAYS:-14}
+  TELEGRAM_API_ID: ${TELEGRAM_API_ID}
+  TELEGRAM_API_HASH_FILE: /run/secrets/telegram_api_hash
+  TELEGRAM_ACCOUNT_NAME: ${TELEGRAM_ACCOUNT_NAME:-collector}
+  CHAT_EXPORT_ACCOUNT_NAME: ${CHAT_EXPORT_ACCOUNT_NAME:-}
+  TELEGRAM_ACCOUNT_DIR: /app/runtime/accounts/${TELEGRAM_ACCOUNT_NAME:-collector}
+  TELEGRAM_DATABASE_PASSPHRASE_FILE: /run/secrets/telegram_database_passphrase
+  TELEGRAM_STANDBY_ACCOUNT_NAME: ${TELEGRAM_STANDBY_ACCOUNT_NAME:-standby}
+  TELEGRAM_STANDBY_ACCOUNT_DIR: /app/runtime/accounts/${TELEGRAM_STANDBY_ACCOUNT_NAME:-standby}
+  TELEGRAM_STANDBY_DATABASE_PASSPHRASE_FILE: /run/secrets/telegram_standby_database_passphrase
+  COLLECTOR_FAILOVER_THRESHOLD: ${COLLECTOR_FAILOVER_THRESHOLD:-2}
+  COLLECTOR_RECOVERY_SECONDS: ${COLLECTOR_RECOVERY_SECONDS:-900}
+  TELEGRAM_WORKGROUP_CHAT_ID: ${TELEGRAM_WORKGROUP_CHAT_ID:-0}
+  TELEGRAM_ALLOWED_CHAT_IDS: ${TELEGRAM_ALLOWED_CHAT_IDS:-}
+  TELEGRAM_ALLOWED_USER_IDS: ${TELEGRAM_ALLOWED_USER_IDS:-}
+  TELEGRAM_REQUIRE_PROXY: ${TELEGRAM_REQUIRE_PROXY:-0}
+  TELEGRAM_PROXY_LINE_KEY: ${TELEGRAM_PROXY_LINE_KEY:-}
+  TELEGRAM_PROXY_HOST: ${TELEGRAM_PROXY_HOST:-127.0.0.1}
+  TELEGRAM_PROXY_PORT: ${TELEGRAM_PROXY_PORT:-0}
+  TELEGRAM_PROXY_EXIT_FINGERPRINT: ${TELEGRAM_PROXY_EXIT_FINGERPRINT:-}
+  AI_BASE_URL: ${AI_BASE_URL:-https://api.openai.com/v1}
+  AI_API_KEY_FILE: /run/secrets/ai_api_key
+  AI_MODEL: ${AI_MODEL:-gpt-4.1-mini}
+  AI_ENABLED: ${AI_ENABLED:-0}
+  AI_MAX_SOURCES: ${AI_MAX_SOURCES:-30}
+  TEAM_SITE_URL: ${TEAM_SITE_URL:-}
+  SITE_PROXY_TOKEN_FILE: /run/secrets/site_proxy_token
+  BOT_ENABLED: ${BOT_ENABLED:-0}
+  TELEGRAM_WORKER_ENABLED: ${TELEGRAM_WORKER_ENABLED:-0}
+  RAW_RETENTION_DAYS: ${RAW_RETENTION_DAYS:-7}
+  RESULT_RETENTION_DAYS: ${RESULT_RETENTION_DAYS:-90}
+  AUDIT_RETENTION_DAYS: ${AUDIT_RETENTION_DAYS:-365}
+  SCAN_CACHE_HOURS: ${SCAN_CACHE_HOURS:-24}
+  MAX_POSTS: ${MAX_POSTS:-100}
+  MAX_GROUP_MESSAGES: ${MAX_GROUP_MESSAGES:-5000}
+  GROUP_ACTIVE_USER_LIMIT: ${GROUP_ACTIVE_USER_LIMIT:-50}
+  GROUP_AD_SAMPLE_MESSAGES: ${GROUP_AD_SAMPLE_MESSAGES:-80}
+  INACTIVE_DAYS: ${INACTIVE_DAYS:-90}
+  MAX_PINNED: ${MAX_PINNED:-20}
+  MAX_COMMENTS_PER_POST: ${MAX_COMMENTS_PER_POST:-1000}
+  MAX_COMMENTS_PER_JOB: ${MAX_COMMENTS_PER_JOB:-10000}
+  MAX_NEW_JOINS_PER_DAY: ${MAX_NEW_JOINS_PER_DAY:-20}
+  WORKER_POLL_SECONDS: ${WORKER_POLL_SECONDS:-3}
+
+x-common: &common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  restart: unless-stopped
+  environment: *common_environment
+  volumes:
+    - app_data:/app/data
+    - tdlib_sessions:/app/runtime/accounts
+    - exports:/app/exports
+  secrets:
+    - platform_bootstrap_password
+    - telegram_api_hash
+    - telegram_database_passphrase
+    - telegram_standby_database_passphrase
+    - ai_api_key
+    - database_password
+    - site_proxy_token
+
+services:
+  web:
+    <<: *common
+    ports:
+      - "${WEB_HOST:-0.0.0.0}:${WEB_PORT:-8848}:8848"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8848/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    <<: *common
+    profiles: ["live"]
+    command: ["python", "-m", "app.worker"]
+    depends_on:
+      web:
+        condition: service_healthy
+
+  bot:
+    <<: *common
+    profiles: ["bot"]
+    command: ["python", "-m", "app.bot"]
+    environment:
+      <<: *common_environment
+      TELEGRAM_BOT_TOKEN_FILE: /run/secrets/telegram_bot_token
+      BOT_ENABLED: "1"
+    secrets:
+      - platform_bootstrap_password
+      - telegram_api_hash
+      - telegram_database_passphrase
+      - telegram_standby_database_passphrase
+      - ai_api_key
+      - database_password
+      - site_proxy_token
+      - telegram_bot_token
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  app_data:
+  tdlib_sessions:
+  exports:
+
+secrets:
+  platform_bootstrap_password:
+    file: ./secrets/platform_bootstrap_password
+  telegram_api_hash:
+    file: ./secrets/telegram_api_hash
+  telegram_database_passphrase:
+    file: ./secrets/telegram_database_passphrase
+  telegram_standby_database_passphrase:
+    file: ./secrets/telegram_standby_database_passphrase
+  ai_api_key:
+    file: ./secrets/ai_api_key
+  database_password:
+    file: ./secrets/database_password
+  site_proxy_token:
+    file: ./secrets/site_proxy_token
+  telegram_bot_token:
+    file: ./secrets/telegram_bot_token

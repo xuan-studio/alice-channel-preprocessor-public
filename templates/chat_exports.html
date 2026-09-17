@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}聊天历史导出 · {{ settings.app_name }}{% endblock %}
+{% block content %}
+<section class="hero workspace-hero export-hero">
+  <div><p class="eyebrow">CHAT HISTORY EXPORT</p><h1>聊天历史导出</h1><p>把当前 Telegram 导出账号可见的群聊历史生成 CSV / JSONL 文件，按日期范围和最大数量控制任务规模。</p></div>
+  <form method="post" action="/chat-exports" class="submit-card export-submit-card">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>群组 / 频道<textarea name="targets" rows="7" placeholder="@group_one&#10;https://t.me/c/4450373602/123&#10;5551686747" required></textarea></label>
+    <div class="export-option-grid">
+      <label>日期范围
+        <select name="date_range">
+          <option value="recent_7">最近一周</option>
+          <option value="recent_30">最近一个月</option>
+          <option value="all">不限日期</option>
+          <option value="custom">自定义日期</option>
+        </select>
+      </label>
+      <label>最大数量
+        <select name="max_messages_mode">
+          <option value="1000">1000</option>
+          <option value="5000">5000</option>
+          <option value="custom">自定义</option>
+        </select>
+      </label>
+    </div>
+    <div class="export-option-grid">
+      <label>开始日期<input type="date" name="since_date"></label>
+      <label>结束日期<input type="date" name="until_date"></label>
+    </div>
+    <label>自定义最大数量<input type="number" name="max_messages_custom" min="1" max="100000" placeholder="例如：20000"></label>
+    <label>任务标签<input name="tags" placeholder="例如：取证，客户A，9月批次"></label>
+    <label class="checkbox"><input type="checkbox" name="include_media" value="1"> 下载媒体文件</label>
+    <button>创建导出任务</button>
+  </form>
+</section>
+
+{% if message %}<div class="alert success-alert">{{ message }}</div>{% endif %}
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+<section class="workspace-metrics export-metrics">
+  <div><span>导出任务</span><strong>{{ stats.total }}</strong></div>
+  <div><span>运行中</span><strong>{{ stats.active }}</strong></div>
+  <div><span>已完成</span><strong>{{ stats.completed }}</strong></div>
+  <div><span>失败</span><strong>{{ stats.failed }}</strong></div>
+  <div><span>媒体任务</span><strong>{{ stats.media }}</strong></div>
+</section>
+
+<section class="section-head card-section-head"><div><p class="eyebrow">EXPORT JOBS</p><h2>导出列表</h2></div><span>{{ jobs|length }} 个任务</span></section>
+<div class="table-wrap export-table">
+  <table>
+    <thead><tr><th>目标</th><th>提交账户</th><th>标签</th><th>范围</th><th>上限</th><th>状态</th><th>消息</th><th>最早消息</th><th>文件</th></tr></thead>
+    <tbody>
+      {% for job in jobs %}
+      <tr>
+        <td><a href="/chat-exports/{{ job.public_id }}">{{ job.chat_title or job.target_label or job.requested_target }}</a><small>{{ job.requested_target }}</small></td>
+        <td>{{ job.created_by_username or 'system' }}</td>
+        <td>{% if job.tags %}<div class="tag-row compact-tags">{% for tag in job.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</div>{% else %}-{% endif %}</td>
+        <td>{{ date_range_labels.get(job.date_range, job.date_range) }}</td>
+        <td>{{ job.max_messages }}</td>
+        <td><span class="badge {{ job.status }}">{{ job.status }}</span><small>{{ job.progress }}%</small></td>
+        <td>{{ job.message_count }}</td>
+        <td>{{ job.oldest_message_at|shanghai }}</td>
+        <td>{% if job.status == 'completed' %}<a href="/chat-exports/{{ job.public_id }}/download/csv">CSV</a> · <a href="/chat-exports/{{ job.public_id }}/download/jsonl">JSONL</a>{% else %}-{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="empty">还没有聊天历史导出任务。</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

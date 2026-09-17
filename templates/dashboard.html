@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero workspace-hero">
+  <div><p class="eyebrow">CHANNEL RESEARCH WORKSPACE</p><h1>频道/群组任务台</h1><p>每个公开频道或群组是一张研究卡片。先判断有没有公开联系入口和互动用户，再进入详情查看社群合作与用户拓展两条路径。</p></div>
+  <form method="post" action="/scans" class="submit-card">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>公开频道/群组<textarea name="target" rows="7" placeholder="@channel_one&#10;https://t.me/group_two&#10;也可以粘贴一段包含 t.me 链接的文本" required></textarea></label>
+    <label>任务标签<input name="tags" placeholder="例如：越南 KOL，待报价，9月批次"></label>
+    {% if can_force_scan %}<label class="checkbox"><input type="checkbox" name="force" value="1"> 强制重扫，忽略 24 小时缓存</label>{% endif %}
+    <button>创建扫描任务</button>
+  </form>
+</section>
+
+<section class="v2-launchpad">
+  <div class="v2-launchpad-copy"><p class="eyebrow">INTELLIGENCE V2</p><h2>智能频道研究 v2</h2><p>新扫描会自动补齐语种、浏览与互动画像，并发现可继续研究的相似频道。</p></div>
+  <a href="/leads"><span>全局线索池</span><strong>{{ card_stats.global_leads }}</strong><small>联系人与互动用户已跨任务合并</small></a>
+  <div><span>v2 画像进度</span><strong>{{ card_stats.v2_ready }} / {{ card_stats.channels }}</strong><small>{% if card_stats.needs_v2 %}还有 {{ card_stats.needs_v2 }} 个旧目标待重新分析{% elif card_stats.v2_blocked %}可访问目标均已升级，{{ card_stats.v2_blocked }} 个目标访问受限{% else %}当前目标均已升级{% endif %}</small>{% if card_stats.needs_v2 and can_force_scan %}<form method="post" action="/v2/rescan-pending"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="compact-button">升级全部旧目标</button></form>{% endif %}</div>
+  <a href="/discover"><span>频道发现池</span><strong>{{ card_stats.discovery }}</strong><small>{{ card_stats.discovery_new }} 个未扫描推荐，来自官方相似频道</small></a>
+</section>
+
+{% if message %}<div class="alert success-alert">{{ message }}</div>{% endif %}
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+<section class="workspace-metrics">
+  <div><span>任务卡片</span><strong>{{ card_stats.channels }}</strong></div>
+  <div><span>有互动线索</span><strong>{{ card_stats.with_comments }}</strong></div>
+  <div><span>公开用户线索</span><strong>{{ card_stats.comment_clues }}</strong></div>
+  <div><span>公开联系线索</span><strong>{{ card_stats.direct_contacts }}</strong></div>
+  <div><span>纯广告群</span><strong>{{ card_stats.pure_ad_groups }}</strong></div>
+</section>
+
+{% if all_tags or all_owners %}
+<form method="get" action="/" class="filter-bar">
+  <label>按任务标签
+    <select name="tag">
+      <option value="">全部标签</option>
+      {% for item in all_tags %}<option value="{{ item }}" {% if item == tag_filter %}selected{% endif %}>{{ item }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>按提交账户
+    <select name="owner">
+      <option value="">全部账户</option>
+      {% for item in all_owners %}<option value="{{ item }}" {% if item == owner_filter %}selected{% endif %}>{{ item }}</option>{% endfor %}
+    </select>
+  </label>
+  <button class="secondary">筛选</button>
+  {% if tag_filter or owner_filter %}<a class="button ghost-button" href="/">清除</a>{% endif %}
+</form>
+{% endif %}
+
+<section class="section-head card-section-head"><div><p class="eyebrow">CURRENT TARGETS</p><h2>研究卡片</h2></div><span>{{ cards|length }} 个目标</span></section>
+<section class="channel-card-grid">
+  {% for card in cards %}
+  {% set job = card.job %}{% set snapshot = card.snapshot %}
+  {% set quality = card.group_quality_view %}
+  <a class="channel-card" href="/jobs/{{ job.public_id }}">
+    <div class="channel-card-top"><span class="badge {{ job.status }}">{{ job.status }}</span><span>{% if card.v2_ready %}<b class="v2-state ready">v2 画像已生成</b>{% elif card.upgrade_blocked %}<b class="v2-state blocked" title="{{ card.upgrade_error }}">无法升级 · 访问受限</b>{% elif job.status == 'completed' %}<b class="v2-state pending">旧版结果 · 待升级</b>{% else %}{{ job.progress }}%{% endif %}</span></div>
+    <div class="owner-line"><span>提交账户：{{ job.created_by_username or 'system' }}</span></div>
+    {% if job.tags %}<div class="tag-row">{% for tag in job.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</div>{% endif %}
+    {% if card.auto_tags %}<div class="tag-row">{% for tag in card.auto_tags %}<span class="tag auto-tag">{{ tag }}</span>{% endfor %}</div>{% endif %}
+    <div class="channel-card-title"><p>{{ snapshot.title if snapshot else job.requested_target }}</p><h3>{% if job.normalized_username == 'manual_review' %}人工复核{% else %}@{{ job.normalized_username }}{% endif %}</h3></div>
+    <p class="channel-profile">{{ card.profile|truncate(210, True, '…') if card.profile else '等待生成频道画像。' }}</p>
+    <div class="channel-signal-row">
+      {% if card.direct_contact_count %}<span class="signal positive">{{ card.direct_contact_count }} 个公开联系线索</span>{% else %}<span class="signal neutral">未发现直接联系线索</span>{% endif %}
+      {% if card.has_comments %}<span class="signal positive">{{ card.comment_clue_count }} 个互动 username</span>{% else %}<span class="signal neutral">没有可访问互动</span>{% endif %}
+    </div>
+    {% if card.language or card.engagement or card.similar_channels_count %}<div class="channel-insight-row"><span>{{ card.language.get('label', '待判断') }}</span><span>均阅 {{ card.engagement.get('avg_views', 0) }}</span><span>周更 {{ card.engagement.get('posts_per_week', 0) }}</span><span>相似 {{ card.similar_channels_count }}</span></div>{% endif %}
+    {% if quality.visible %}
+    <div class="quality-strip quality-{{ quality.tone }}">
+      <div><span>群质量</span><strong>{{ quality.label }}</strong></div>
+      <div><span>广告分</span><strong>{{ quality.score_label }}</strong></div>
+      <small>{{ quality.skip_reason_label or quality.method_label }}</small>
+    </div>
+    {% endif %}
+    <div class="channel-card-stats"><div><span>成员</span><strong>{{ snapshot.member_count if snapshot else '-' }}</strong></div><div><span>互动</span><strong>{{ card.comments_fetched if snapshot else '-' }}</strong></div><div><span>内容</span><strong>{{ snapshot.posts_scanned if snapshot else job.result_summary.get('posts_scanned', '-') }}</strong></div></div>
+    <div class="channel-card-footer"><span>最后活跃：{{ snapshot.last_activity_at|shanghai if snapshot else '-' }}</span><strong>查看详情 →</strong></div>
+  </a>
+  {% else %}<div class="empty-state">还没有任务。提交一个公开频道或群组开始预处理。</div>{% endfor %}
+</section>
+
+{% if history_jobs %}<details class="history-panel"><summary>查看历史与重复任务（{{ history_jobs|length }}）</summary><div class="table-wrap"><table><thead><tr><th>频道</th><th>提交账户</th><th>标签</th><th>状态</th><th>进度</th><th>错误</th><th>创建时间</th></tr></thead><tbody>{% for job in history_jobs %}<tr><td><a href="/jobs/{{ job.public_id }}">{{ job.requested_target if job.normalized_username == 'manual_review' else '@' + job.normalized_username }}</a></td><td>{{ job.created_by_username or 'system' }}</td><td>{% if job.tags %}<div class="tag-row compact-tags">{% for tag in job.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</div>{% else %}-{% endif %}</td><td><span class="badge {{ job.status }}">{{ job.status }}</span></td><td>{{ job.progress }}%</td><td>{{ job.error_code or '-' }}</td><td>{{ job.created_at }}</td></tr>{% endfor %}</tbody></table></div></details>{% endif %}
+{% endblock %}

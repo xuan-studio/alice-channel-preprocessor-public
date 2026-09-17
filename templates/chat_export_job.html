@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ job.target_label or job.requested_target }} · 聊天历史导出{% endblock %}
+{% block content %}
+<section class="job-head channel-detail-head">
+  <div><a class="back-link" href="/chat-exports">← 返回导出列表</a><p class="eyebrow">CHAT HISTORY EXPORT</p><h1>{{ job.chat_title or job.target_label or job.requested_target }}</h1><p>{{ job.requested_target }}</p></div>
+  <div class="status-box"><span class="badge {{ job.status }}">{{ job.status }}</span><strong>{{ job.progress }}%</strong><span>{{ job.stage }}</span></div>
+</section>
+
+{% if job.error_message %}<div class="alert">{{ job.error_message }}</div>{% endif %}
+
+<div class="actions detail-actions">
+  {% if job.status in ['queued','exporting'] %}<form method="post" action="/chat-exports/{{ job.public_id }}/cancel"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="danger">取消</button></form>{% endif %}
+  {% if job.status in ['failed','cancelled'] %}<form method="post" action="/chat-exports/{{ job.public_id }}/retry"><input type="hidden" name="csrf" value="{{ csrf }}"><button>重试</button></form>{% endif %}
+  {% if job.status == 'completed' %}
+  <a class="button" href="/chat-exports/{{ job.public_id }}/download/csv">下载 CSV</a>
+  <a class="button secondary" href="/chat-exports/{{ job.public_id }}/download/jsonl">下载 JSONL</a>
+  <a class="button secondary" href="/chat-exports/{{ job.public_id }}/download/metadata">下载元数据</a>
+  {% if job.files and job.files.get('archive') %}<a class="button secondary" href="/chat-exports/{{ job.public_id }}/download/archive">下载媒体 ZIP</a>{% endif %}
+  {% endif %}
+</div>
+
+<section class="export-detail-grid">
+  <article class="card export-summary-card">
+    <p class="eyebrow">SUMMARY</p>
+    <div class="export-stat-grid">
+      <div><span>消息数</span><strong>{{ job.message_count }}</strong></div>
+      <div><span>扫描数</span><strong>{{ job.scanned_count }}</strong></div>
+      <div><span>媒体文件</span><strong>{{ job.media_files_count }}</strong></div>
+      <div><span>停止原因</span><strong>{{ stop_reason_labels.get(job.stop_reason, job.stop_reason or '-') }}</strong></div>
+    </div>
+  </article>
+  <article class="card">
+    <p class="eyebrow">SCOPE</p>
+    <dl class="profile-grid">
+      <dt>日期范围</dt><dd>{{ date_range_labels.get(job.date_range, job.date_range) }}</dd>
+      <dt>开始</dt><dd>{{ job.since_at|shanghai }}</dd>
+      <dt>结束</dt><dd>{{ job.until_at|shanghai }}</dd>
+      <dt>最大数量</dt><dd>{{ job.max_messages }}</dd>
+      <dt>下载媒体</dt><dd>{{ '是' if job.include_media else '否' }}</dd>
+      <dt>导出账号</dt><dd>{{ job.account_name }}</dd>
+    </dl>
+  </article>
+</section>
+
+<section class="card">
+  <p class="eyebrow">CHAT</p>
+  <dl class="profile-grid">
+    <dt>Chat ID</dt><dd>{{ job.chat_id or '-' }}</dd>
+    <dt>类型</dt><dd>{{ chat_type_labels.get(job.chat_type, job.chat_type or '-') }}</dd>
+    <dt>最新消息</dt><dd>{{ job.newest_message_at|shanghai }}</dd>
+    <dt>最早消息</dt><dd>{{ job.oldest_message_at|shanghai }}</dd>
+    <dt>文件</dt><dd>{% if job.files %}<div class="source-link-list">{% for key,path in job.files.items() %}<a href="/chat-exports/{{ job.public_id }}/download/{{ key }}">{{ key }}</a>{% endfor %}</div>{% else %}-{% endif %}</dd>
+  </dl>
+</section>
+
+<details class="audit-panel"><summary>查看导出事件</summary><section class="card"><ol class="timeline">{% for event in events %}<li><strong>{{ event.event_type }}</strong><span>{{ event.created_at }}</span></li>{% endfor %}</ol></section></details>
+{% endblock %}

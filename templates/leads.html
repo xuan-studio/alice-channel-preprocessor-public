@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}全局线索池 · {{ settings.app_name }}{% endblock %}
+{% block content %}
+<section class="section-head leads-head"><div><a class="back-link" href="/">← 返回任务台</a><p class="eyebrow">GLOBAL LEADS</p><h1>全局线索池</h1><p class="muted">把所有已完成任务中的公开联系人和互动用户按身份合并，保留来源频道与原始证据。</p></div><a class="button" href="/leads/export.csv?q={{ query|urlencode }}&status={{ status_filter|urlencode }}&kind={{ kind_filter|urlencode }}">导出当前结果</a></section>
+{% if message %}<div class="alert success-alert">{{ message }}</div>{% endif %}
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+<section class="workspace-metrics leads-metrics">
+  <div><span>全部线索</span><strong>{{ stats.total }}</strong></div>
+  <div><span>当前结果</span><strong>{{ stats.visible }}</strong></div>
+  <div><span>公开联系人</span><strong>{{ stats.direct }}</strong></div>
+  <div><span>互动用户</span><strong>{{ stats.audience }}</strong></div>
+  <div><span>跨频道出现</span><strong>{{ stats.multi_source }}</strong></div>
+</section>
+
+<form method="get" action="/leads" class="lead-filter-bar">
+  <label>搜索<input name="q" value="{{ query }}" placeholder="username、显示名称、标签或来源频道"></label>
+  <label>跟进状态<select name="status"><option value="">全部状态</option>{% for value,label in lead_statuses %}<option value="{{ value }}" {% if value == status_filter %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>线索类型<select name="kind"><option value="">全部类型</option><option value="direct_contact" {% if kind_filter == 'direct_contact' %}selected{% endif %}>公开联系人</option><option value="audience" {% if kind_filter == 'audience' %}selected{% endif %}>互动用户</option><option value="both" {% if kind_filter == 'both' %}selected{% endif %}>联系人 + 互动</option></select></label>
+  <button>筛选</button>
+  {% if query or status_filter or kind_filter %}<a class="button ghost-button" href="/leads">清除</a>{% endif %}
+</form>
+
+<div class="table-wrap global-leads-table"><table><thead><tr><th>线索</th><th>身份</th><th>类型</th><th>跟进</th><th>来源</th><th>互动</th><th>最后出现</th><th>证据</th><th>统一维护</th></tr></thead><tbody>
+{% for item in leads %}<tr>
+  <td><strong>{{ item.value }}</strong>{% if item.display_name %}<small>{{ item.display_name }}</small>{% endif %}{% if item.tags %}<div class="tag-row compact-tags">{% for tag in item.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</div>{% endif %}</td>
+  <td>{% if item.entity_kind == 'user' %}用户{% elif item.entity_kind == 'channel_or_group' %}频道/群组{% elif item.entity_kind == 'unknown' %}待核验{% else %}{{ item.entity_kind }}{% endif %}</td>
+  <td>{% if item.lead_kind == 'both' %}联系人 + 互动{% elif item.lead_kind == 'direct_contact' %}公开联系人{% else %}互动用户{% endif %}</td>
+  <td><span class="lead-status lead-status-{{ item.lead_status }}">{{ item.lead_status }}</span>{% if item.followup_note %}<small>{{ item.followup_note|truncate(80, True, '…') }}</small>{% endif %}</td>
+  <td><strong>{{ item.source_count }} 个频道</strong><div class="source-link-list">{% for source in item.sources[:3] %}<a href="/jobs/{{ source.job_id }}">@{{ source.username }}</a>{% endfor %}{% if item.source_count > 3 %}<span>+{{ item.source_count - 3 }}</span>{% endif %}</div></td>
+  <td>{{ item.comment_count }} 次<small>{{ item.post_count }} 条内容</small></td>
+  <td>{{ item.latest_at|shanghai }}</td>
+  <td>{{ item.evidence_count }} 条<details><summary>查看</summary>{% for source in item.sources[:5] %}<p class="lead-evidence"><strong>@{{ source.username }}</strong> {{ source.evidence }}{% if source.source_ref.startswith('http') %} <a href="{{ source.source_ref }}">原文</a>{% endif %}</p>{% endfor %}</details></td>
+  <td><form method="post" action="/leads/update" class="global-lead-edit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="key" value="{{ item.key }}"><select name="lead_status">{% for value,label in lead_statuses %}<option value="{{ value }}" {% if value == item.lead_status %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><input name="tags" value="{{ item.tags|join(', ') }}" placeholder="标签"><input name="followup_note" value="{{ item.followup_note }}" placeholder="跟进备注"><button class="secondary compact-button">同步保存</button></form></td>
+</tr>{% else %}<tr><td colspan="9" class="empty">没有符合筛选条件的线索。</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

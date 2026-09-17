@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}登录 · {{ settings.app_name }}{% endblock %}
+{% block content %}
+<section class="auth-card">
+  <p class="eyebrow">INTERNAL ACCESS</p>
+  <h1>登录频道预处理台</h1>
+  <p class="muted">评论用户名与联系方式证据不会发送到 Telegram 群，只在登录后显示。</p>
+  {% if error %}<div class="alert">用户名或密码错误。</div>{% endif %}
+  <form method="post" action="/login" class="stack">
+    <label>用户名<input name="username" autocomplete="username" required></label>
+    <label>密码<input type="password" name="password" autocomplete="current-password" required></label>
+    <button type="submit">登录</button>
+  </form>
+</section>
+{% endblock %}

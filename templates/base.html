@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}{{ settings.app_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css?v=9">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">{{ settings.app_name }} <span class="version-pill">v2</span></a>
+    {% if user %}
+    <nav>
+      <span>{{ user.display_name or user.username }} · {{ user.role }}</span>
+      <a href="/discover">发现</a>
+      <a href="/leads">线索池</a>
+      <a href="/chat-exports">导出</a>
+      {% if user.role == 'super_admin' %}<a href="/admin/users">成员</a>{% endif %}
+      <a href="/account/password">改密码</a>
+      <form method="post" action="/logout" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="link">退出</button></form>
+    </nav>
+    {% endif %}
+  </header>
+  {% if settings.demo_mode %}<div class="demo-banner">演示模式：仅使用虚构数据，不启动 Telegram 采集、AI 请求或聊天导出。</div>{% endif %}
+  <main class="container">{% block content %}{% endblock %}</main>
+  <footer class="site-footer"><span>轩制作 · Made by XUAN</span><a href="https://x.com/Yuanzhuo_labs/status/2099855596728328701" target="_blank" rel="noreferrer">Article</a></footer>
+</body>
+</html>
